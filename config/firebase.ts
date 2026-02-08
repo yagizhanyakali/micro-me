@@ -1,7 +1,18 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { firebaseConfig } from './firebase.creds';
+
+// Firebase client config — these are public client-side identifiers, not secrets.
+// Security is enforced by Firestore rules and Firebase Auth, not by hiding these keys.
+const firebaseConfig = {
+  apiKey: 'AIzaSyBFZY1557inxc4C4kXFBL7G0EXdhb7R0kg',
+  authDomain: 'micro-me-67a19.firebaseapp.com',
+  projectId: 'micro-me-67a19',
+  storageBucket: 'micro-me-67a19.firebasestorage.app',
+  messagingSenderId: '309753964138',
+  appId: '1:309753964138:web:bb4ba50fd0bc1f5ff74c13',
+  measurementId: 'G-CBJK65SWZ2',
+};
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 

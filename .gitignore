@@ -48,3 +48,6 @@ app-example
 
 # Firebase credentials
 config/firebase.creds.ts
+
+# Google Play Store service account key
+play-store-key.json
