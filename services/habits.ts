@@ -62,6 +62,14 @@ export async function addHabit(
   return docRef.id;
 }
 
+export async function editHabit(
+  habitId: string,
+  title: string,
+  emoji: string
+): Promise<void> {
+  await updateDoc(doc(db, HABITS_COLLECTION, habitId), { title, emoji });
+}
+
 export async function deleteHabit(habitId: string): Promise<void> {
   await updateDoc(doc(db, HABITS_COLLECTION, habitId), {
     archived: true,

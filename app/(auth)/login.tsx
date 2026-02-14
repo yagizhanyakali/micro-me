@@ -98,6 +98,15 @@ export default function LoginScreen() {
           />
 
           <TouchableOpacity
+            style={styles.forgotPassword}
+            onPress={() => router.push('/(auth)/forgot-password' as any)}
+          >
+            <Text style={[styles.forgotPasswordText, { color: colors.accent }]}>
+              Forgot Password?
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.button, { backgroundColor: colors.accent }]}
             onPress={handleLogin}
             disabled={loading}
@@ -198,6 +207,14 @@ const styles = StyleSheet.create({
   },
   googleButtonText: {
     fontSize: 16,
+    fontWeight: '500',
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginTop: -4,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
     fontWeight: '500',
   },
   switchAuth: {

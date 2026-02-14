@@ -5,12 +5,13 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
+  sendPasswordResetEmail,
   GoogleAuthProvider,
   signInWithCredential,
 } from 'firebase/auth';
 import { Alert } from 'react-native';
 import { auth } from '@/config/firebase';
-import { createUserDocument } from '@/services/users';
+import { createUserDocument, deleteUserData } from '@/services/users';
 
 // Lazy-load Google Sign-In so the app doesn't crash in Expo Go
 // (the native module is only available in a development/production build)
@@ -28,6 +29,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  deleteAccount: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -88,13 +91,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
+  const deleteAccount = async () => {
+    if (!user) throw new Error('Not authenticated');
+    // Delete all Firestore data first, then the auth account
+    await deleteUserData(user.uid);
+    await user.delete();
+  };
+
   const signOut = async () => {
     await firebaseSignOut(auth);
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, googleSignInAvailable, signIn, signUp, signInWithGoogle, signOut }}
+      value={{ user, loading, googleSignInAvailable, signIn, signUp, signInWithGoogle, resetPassword, deleteAccount, signOut }}
     >
       {children}
     </AuthContext.Provider>

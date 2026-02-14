@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Habit, DailyLog } from '@/types';
-import { subscribeToHabits, addHabit, deleteHabit } from '@/services/habits';
+import { subscribeToHabits, addHabit, editHabit as editHabitService, deleteHabit } from '@/services/habits';
 import {
   subscribeToDailyLog,
   toggleHabitCompletion,
@@ -10,9 +11,13 @@ import {
 import {
   requestNotificationPermissions,
   scheduleDailyReminder,
-  cancelDailyReminder,
+  cancelTodayAndKeepFutureReminders,
+  DEFAULT_REMINDER_HOUR,
+  DEFAULT_REMINDER_MINUTE,
 } from '@/services/notifications';
 import { useAuth } from './AuthContext';
+
+const REMINDER_TIME_KEY = 'reminder_time';
 
 interface DataContextType {
   habits: Habit[];
@@ -20,8 +25,12 @@ interface DataContextType {
   isHabitCompletedToday: (habitId: string) => boolean;
   toggleHabit: (habitId: string) => Promise<boolean>;
   createHabit: (title: string, emoji: string) => Promise<string>;
+  editHabit: (habitId: string, title: string, emoji: string) => Promise<void>;
   removeHabit: (habitId: string) => Promise<void>;
   getLogsForRange: (startDate: string, endDate: string) => Promise<DailyLog[]>;
+  reminderHour: number;
+  reminderMinute: number;
+  updateReminderTime: (hour: number, minute: number) => Promise<void>;
   loading: boolean;
 }
 
@@ -32,30 +41,51 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [todayLog, setTodayLog] = useState<DailyLog | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reminderHour, setReminderHour] = useState(DEFAULT_REMINDER_HOUR);
+  const [reminderMinute, setReminderMinute] = useState(DEFAULT_REMINDER_MINUTE);
+  const reminderTimeLoaded = useRef(false);
+
+  // Load saved reminder time from AsyncStorage
+  useEffect(() => {
+    (async () => {
+      try {
+        const saved = await AsyncStorage.getItem(REMINDER_TIME_KEY);
+        if (saved) {
+          const { hour, minute } = JSON.parse(saved);
+          setReminderHour(hour);
+          setReminderMinute(minute);
+        }
+      } catch {
+        // Use defaults
+      } finally {
+        reminderTimeLoaded.current = true;
+      }
+    })();
+  }, []);
 
   // Request notification permissions and schedule daily reminder on login
   useEffect(() => {
-    if (!user) return;
+    if (!user || !reminderTimeLoaded.current) return;
     (async () => {
       const granted = await requestNotificationPermissions();
       if (granted) {
-        await scheduleDailyReminder();
+        await scheduleDailyReminder(reminderHour, reminderMinute);
       }
     })();
-  }, [user]);
+  }, [user, reminderHour, reminderMinute]);
 
-  // Cancel today's reminder if all habits are completed
+  // Cancel today's reminder if all habits are completed, but keep future days
   useEffect(() => {
     if (habits.length === 0) return;
     const completedIds = todayLog?.completedHabitIds ?? [];
     const allDone = habits.every((h) => completedIds.includes(h.id));
     if (allDone) {
-      cancelDailyReminder();
+      cancelTodayAndKeepFutureReminders(reminderHour, reminderMinute);
     } else {
-      // Re-schedule if user unchecks a habit
-      scheduleDailyReminder();
+      // Re-schedule recurring reminder if user unchecks a habit
+      scheduleDailyReminder(reminderHour, reminderMinute);
     }
-  }, [habits, todayLog]);
+  }, [habits, todayLog, reminderHour, reminderMinute]);
 
   useEffect(() => {
     if (!user) {
@@ -107,6 +137,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [user]
   );
 
+  const editHabitCb = useCallback(
+    async (habitId: string, title: string, emoji: string) => {
+      await editHabitService(habitId, title, emoji);
+    },
+    []
+  );
+
   const removeHabit = useCallback(
     async (habitId: string) => {
       await deleteHabit(habitId);
@@ -122,6 +159,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [user]
   );
 
+  const updateReminderTime = useCallback(
+    async (hour: number, minute: number) => {
+      setReminderHour(hour);
+      setReminderMinute(minute);
+      await AsyncStorage.setItem(REMINDER_TIME_KEY, JSON.stringify({ hour, minute }));
+      // The useEffect watching reminderHour/reminderMinute will reschedule automatically
+    },
+    []
+  );
+
   return (
     <DataContext.Provider
       value={{
@@ -130,8 +177,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         isHabitCompletedToday,
         toggleHabit,
         createHabit,
+        editHabit: editHabitCb,
         removeHabit,
         getLogsForRange,
+        reminderHour,
+        reminderMinute,
+        updateReminderTime,
         loading,
       }}
     >
