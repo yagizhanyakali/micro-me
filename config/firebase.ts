@@ -1,6 +1,9 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeAuth, getAuth } from 'firebase/auth';
+// @ts-expect-error: getReactNativePersistence exists in the RN bundle resolved by Metro, but the top-level "types" condition in @firebase/auth's exports map shadows the react-native types
+import { getReactNativePersistence } from '@firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Firebase client config — these are public client-side identifiers, not secrets.
 // Security is enforced by Firestore rules and Firebase Auth, not by hiding these keys.
@@ -16,10 +19,11 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Firebase v12 automatically uses the correct persistence for the platform.
-// On React Native, the "react-native" export map is resolved, which includes
-// AsyncStorage-based persistence out of the box.
-const auth = getAuth(app);
+const auth = getApps().length === 1
+  ? initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    })
+  : getAuth(app);
 
 const db = getFirestore(app);
 

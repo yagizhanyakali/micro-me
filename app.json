@@ -2,7 +2,7 @@
   "expo": {
     "name": "MicroMe",
     "slug": "micro-me",
-    "version": "1.0.2",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "microme",
@@ -23,7 +23,7 @@
       "edgeToEdgeEnabled": true,
       "package": "com.microme.app",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 3
+      "versionCode": 5
     },
     "web": {
       "output": "static",
